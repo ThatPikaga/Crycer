@@ -1,5 +1,5 @@
 name: Checks
-on: { push: { branches: [main] }, pull_request: {} }
+on: { push: { branches: [main, master] }, pull_request: {} }
 jobs:
   build:
     runs-on: ubuntu-latest
