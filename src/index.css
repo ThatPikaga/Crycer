@@ -1,0 +1,29 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/playfair-display/wght-italic.css";
+@import "@fontsource-variable/playfair-display/wght.css";
+@import "@fontsource-variable/nunito";
+@import "@fontsource-variable/roboto-slab";
+@import "@fontsource/anton/latin-400.css";
+@import "@fontsource/pacifico/latin-400.css";
+@import "./solid-glass.css";
+
+@utility font-mark {
+  font-family: "Playfair Display Variable", Georgia, serif;
+  font-style: italic;
+}
+html, body, #root { height: 100%; }
+body { overscroll-behavior: none; }
+@keyframes tumble { from { transform: rotate(-200deg) scale(.6); } to { transform: rotate(0) scale(1); } }
+input[type="number"]::-webkit-inner-spin-button { display: none; }
+/* Keyboard users always see where they are. Zero specificity, so a control that draws its own
+   focus ring (outline-none + ring) keeps it; every plain button, tile and link gets this one. */
+:where(button, a, select, summary, [role="radio"], [role="button"], [role="switch"], [tabindex]):focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ring) 85%, white);
+  outline-offset: 2px;
+}
+/* a colour well is a hidden input over a painted circle: ring the circle */
+.color-well:focus-within { box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }

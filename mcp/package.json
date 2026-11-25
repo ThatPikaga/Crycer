@@ -1,0 +1,14 @@
+{
+  "name": "crycer-mcp",
+  "version": "0.1.0",
+  "description": "Lets an AI agent build surreal ray-traced worlds and get the pictures back.",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "crycer-mcp": "server.mjs", "crycer": "cli.mjs" },
+  "scripts": { "start": "node server.mjs", "render": "node cli.mjs", "test": "node test.mjs" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "playwright-core": "^1.65.1",
+    "zod": "^4.6.7"
+  }
+}

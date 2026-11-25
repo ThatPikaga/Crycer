@@ -1,0 +1,147 @@
+// One small store for the whole app: the world, what is selected, undo history, saved worlds.
+import * as React from "react"
+
+import type { Engine, Status } from "./engine/engine"
+import { type DesignOpts, designOpts } from "./design/opts"
+import { at, keyAt, newAnim, pose } from "./engine/anim"
+import { type Land, type LockKey, LANDS, MAX_TERRAINS, landFrom, type Thing, type World, MAX_THINGS, STARTERS, clone, decodeWorld, encodeWorld, newId, readCode, roll, usesCutout } from "./engine/scene"
+import { keep, recall } from "./lib/keep"
+import { notify } from "./notice"
+
+export type Sel = { type: "sky" | "sea" | "title" | "camera" | "picture" | "sound" } | { type: "land"; id?: string } | { type: "thing"; id: string }
+export interface Saved { id: string; name: string; code: string; thumb: string; at: number }
+export interface State {
+  world: World; sel: Sel; locks: LockKey[]; past: World[]; future: World[]
+  quality: number; status: Status; saved: Saved[]; sculpt: { tool: "off" | "raise" | "lower" | "smooth" | "erode"; size: number }
+  wires: boolean; mask: number; dialog: null | "cover" | "loop" | "find" | "gallery"; rolls: number
+  playhead: number; playing: boolean; timeline: boolean; phase: number | null
+  /** the music: what is loaded, whether it is sounding, and whether the picture is following it */
+  /** the words and layout of the design being made (cover, flyer, …) */
+  design: DesignOpts
+  song: { name: string; duration: number; bpm: number; beats: number } | null; sounding: boolean; mic: boolean
+}
+const KEY = "crycer:saved"
+const SHELF_LIMIT = 40
+const loadSaved = (): Saved[] => {
+  try { const v = recall<unknown>(KEY, []); return Array.isArray(v) ? v.filter((s): s is Saved => !!s && typeof s.id === "string" && typeof s.name === "string" && typeof s.code === "string").map((s) => ({ ...s, thumb: typeof s.thumb === "string" && s.thumb.startsWith("data:image/") ? s.thumb : "", at: +s.at || 0 })).slice(0, SHELF_LIMIT) : [] }
+  catch { return [] } // storage blocked (a private window) or spoiled: start with an empty shelf
+}
+
+let state: State = {
+  world: STARTERS[0](), sel: { type: "sky" }, locks: [], past: [], future: [], quality: 1,
+  status: { phase: "blocks", samples: 0, target: 16 }, saved: loadSaved(), sculpt: { tool: "off", size: 0.12 },
+  wires: true, mask: 0, dialog: null, rolls: 0, playhead: 0, playing: false, timeline: false, phase: null, song: null, sounding: false, mic: false, design: designOpts({ format: "cd" }),
+}
+const subs = new Set<() => void>()
+const emit = () => subs.forEach((f) => f())
+export const get = () => state
+export function patch(p: Partial<State>) { state = { ...state, ...p }; emit() }
+export function useApp<T>(pick: (s: State) => T): T {
+  return React.useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f) }, () => pick(state))
+}
+
+export let engine: Engine | null = null
+export const setEngine = (e: Engine | null) => { engine = e }
+
+let lastLabel = "", lastAt = 0
+/** Told of every change to the world, with its label (the time-lapse keeps a record this way). */
+export const worldTaps = new Set<(w: World, label: string) => void>()
+const tap = (label: string) => worldTaps.forEach((f) => f(state.world, label))
+/** Change the world. Changes with the same label within a moment count as one step of undo. */
+export function edit(label: string, fn: (w: World) => void) {
+  const now = Date.now(), fresh = label !== lastLabel || now - lastAt > 700
+  const next = clone(state.world); fn(next)
+  // editing while the playhead sits on a key changes that key
+  const ki = keyAt(next.anim, state.playhead); if (ki >= 0 && !label.startsWith("anim")) next.anim!.keys[ki].pose = pose(next)
+  if (next.cutout && !usesCutout(next)) delete next.cutout
+  state = { ...state, world: next, past: fresh ? [...state.past.slice(-80), state.world] : state.past, future: [] }
+  lastLabel = label; lastAt = now; emit(); tap(label)
+}
+export function replaceWorld(w: World, label = "replace") { lastLabel = label; lastAt = 0; state = { ...state, world: w, past: [...state.past.slice(-80), state.world], future: [], sel: { type: "sky" } }; emit(); tap(label) }
+export function undo() { const p = state.past.at(-1); if (!p) return; lastAt = 0; state = { ...state, world: p, past: state.past.slice(0, -1), future: [state.world, ...state.future] }; emit(); tap("undo") }
+export function redo() { const f = state.future[0]; if (!f) return; lastAt = 0; state = { ...state, world: f, past: [...state.past, state.world], future: state.future.slice(1) }; emit(); tap("redo") }
+
+export const terrainById = (w: World, id?: string): Land | undefined => id ? w.terrains?.find(t => t.id === id) : w.land
+export const selectedTerrainId = (s: State) => s.sel.type === "land" && s.sel.id && terrainById(s.world, s.sel.id) ? s.sel.id : undefined
+export function editTerrain(id: string | undefined, label: string, fn: (t: Land) => void) {
+  edit(`land:${id ?? "original"}:${label}`, w => { const t = terrainById(w, id); if (t) fn(t) })
+}
+export function addTerrain() {
+  const w = state.world, count = w.terrains?.length ?? 0
+  if (count >= MAX_TERRAINS - 1) { notify(`A world holds up to ${MAX_TERRAINS} terrain pieces.`); return }
+  const id = newId(), angle = w.cam.yaw + count * 2.4
+  const offset = w.land.on || count ? Math.max(4, w.land.radius * 0.8) : 0
+  const pos: Land["pos"] = [w.cam.target[0] + offset * Math.cos(angle), 0, w.cam.target[2] - offset * Math.sin(angle)]
+  const names = new Set(w.terrains?.map(t => t.name))
+  let number = 2
+  while (names.has(`Terrain ${number}`)) number++
+  const piece = { ...landFrom(LANDS[0], { radius: 4.5, height: 4, seed: Math.random() * 50, pos }), id, name: `Terrain ${number}` }
+  edit("add-terrain:" + id, next => { (next.terrains ??= []).push(piece) })
+  patch({ sel: { type: "land", id } })
+}
+export function rollTerrain(id: string) {
+  const fresh = roll(state.world, new Set(), "land").land
+  editTerrain(id, "roll", t => Object.assign(t, fresh, { on: true, flat: false, sculpt: undefined, channel: fresh.channel }))
+}
+export function removeTerrain(id: string) {
+  edit("remove-terrain:" + id, w => { w.terrains = w.terrains?.filter(t => t.id !== id) })
+  patch({ sel: { type: "land" } })
+}
+
+export const selectedThing = (s: State): Thing | undefined => (s.sel.type === "thing" ? s.world.things.find((t) => t.id === (s.sel as { id: string }).id) : undefined)
+export function editThing(id: string, label: string, fn: (t: Thing) => void) { edit(`${label}:${id}`, (w) => { const t = w.things.find((x) => x.id === id); if (t) fn(t) }) }
+export function addThing(t: Thing) {
+  if (state.world.things.length >= MAX_THINGS) { notify(`A world holds up to ${MAX_THINGS} things. Remove one to make room.`); return false }
+  edit("add" + t.id, (w) => { w.things.push(t) }); patch({ sel: { type: "thing", id: t.id } }); return true
+}
+export function removeThing(id: string) { edit("remove" + id, (w) => { w.things = w.things.filter((t) => t.id !== id) }); patch({ sel: { type: "sky" } }) }
+export function duplicateThing(id: string) {
+  const src = state.world.things.find((t) => t.id === id); if (!src) return
+  const copy = { ...clone(src), id: newId(), name: src.name.replace(/( copy)?$/, " copy"), pos: [src.pos[0] + src.size[0] * 1.4, src.pos[1], src.pos[2] + src.size[2] * 0.6] as Thing["pos"] }
+  addThing(copy)
+}
+export function toggleLock(k: LockKey) { patch({ locks: state.locks.includes(k) ? state.locks.filter((x) => x !== k) : [...state.locks, k] }) }
+export function rollDice(only?: LockKey) {
+  const w = roll(state.world, new Set(state.locks), only); lastAt = 0
+  state = { ...state, world: w, past: [...state.past.slice(-80), state.world], future: [], rolls: state.rolls + 1, sel: state.sel.type === "thing" ? { type: "sky" } : state.sel }; emit(); tap("dice")
+}
+
+// ---------- links and the shelf of saved worlds ----------
+export async function shareLink(): Promise<string> { return `${location.origin}${location.pathname}#w=${await encodeWorld(state.world)}` }
+export async function loadFromHash(): Promise<boolean> {
+  const m = /^#w=(.*)$/s.exec(location.hash); if (!m) return false
+  const clear = () => { try { history.replaceState(null, "", location.pathname + location.search) } catch { /* ignore */ } }
+  const got = await readCode(m[1])
+  if (!got.world) { clear(); notify(`${got.why} Here is a world to start from instead.`, { ms: 9000 }); return false }
+  const w = await (await import("./text")).prepare(got.world)
+  w.remixOf = w.remixOf ?? w.name; state = { ...state, world: w, past: state.past.length ? [...state.past.slice(-80), state.world] : [], future: [], sel: { type: "sky" } }; emit(); tap("open"); clear()
+  if (got.note) notify(got.note); return true
+}
+// ---------- the timeline ----------
+export function seek(t: number) { t = Math.min(1, Math.max(0, t)); const w = state.world; state = { ...state, playhead: t, world: w.anim && w.anim.keys.length ? at(w, t) : w }; emit() }
+export function addKey() { const t = state.playhead; edit("anim-key", (w) => { const an = (w.anim ??= newAnim()); const i = keyAt(an, t); const k = { t, pose: pose(w) }; if (i >= 0) an.keys[i] = k; else an.keys.push(k); an.keys.sort((a, b) => a.t - b.t) }) }
+export function removeKey(i: number) { edit("anim-unkey", (w) => { w.anim?.keys.splice(i, 1) }) }
+
+/** Play the loop moves (rise, wave, bob, spin) once in the picture, then put everything back. */
+let movesRun = 0
+export function previewMoves(seconds = 4) { const id = ++movesRun, t0 = performance.now(); const tick = (now: number) => { if (id !== movesRun) return; const k = (now - t0) / 1000 / seconds; if (k >= 1) { patch({ phase: null }); return } patch({ phase: k }); requestAnimationFrame(tick) }; requestAnimationFrame(tick) }
+
+export async function saveToShelf(replaceId?: string) {
+  const renderer = engine
+  if (!renderer) return
+  const w = state.world
+  const code = await encodeWorld(w, true)
+  const entries = state.saved
+  if (replaceId !== undefined && !entries.some((s) => s.id === replaceId)) return
+  if (replaceId === undefined && entries.length >= SHELF_LIMIT) {
+    notify(`My worlds holds ${SHELF_LIMIT} saves. Replace or remove a saved world to make room.`)
+    return
+  }
+  const item: Saved = { id: replaceId ?? newId(), name: w.name, code, thumb: renderer.thumb(w, 192, 144), at: Date.now() }
+  const saved = replaceId === undefined ? [item, ...entries] : entries.map((s) => s.id === replaceId ? item : s)
+  patch({ saved }); if (!keepShelf(saved)) notify("Saved for this visit only: this browser is full or is not letting the page keep things. Remove a few saved worlds, or save the picture instead.", { ms: 9000 })
+}
+/** Write the shelf; false if the browser would not keep it (full, or a private window). */
+const keepShelf = (saved: Saved[]) => keep(KEY, saved)
+export function dropFromShelf(id: string) { const saved = state.saved.filter((s) => s.id !== id); keepShelf(saved); patch({ saved }) }
+export async function openSaved(s: Saved) { const w = await decodeWorld(s.code); if (w) replaceWorld(await (await import("./text")).prepare(w), "open"); else notify("That saved world could not be opened. It may be from an older version.") }

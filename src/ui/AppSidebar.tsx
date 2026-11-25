@@ -1,0 +1,100 @@
+// The left sidebar: the parts of this world, its things, and worlds to start from.
+import type * as React from "react"
+import { Aperture, AudioLines, BookmarkPlus, Camera, Eye, EyeOff, Image, LayoutGrid, Lock, LockOpen, Mountain, Plus, Sun, Type, Waves, X } from "lucide-react"
+
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupAction, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuAction,
+  SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar,
+} from "@/components/ui/sidebar"
+import { type LockKey, KIND_LABEL } from "@/engine/scene"
+import { WORLDS, WORLD_GROUPS } from "@/engine/worlds"
+import { type Sel, dropFromShelf, editThing, openSaved, patch, replaceWorld, saveToShelf, toggleLock, useApp } from "@/store"
+
+import { pickCutout } from "@/io"
+import { setSheet } from "./sheet"
+import { ADDABLE, KIND_ICON, newThing } from "./Viewport"
+
+const PARTS: { type: Exclude<Sel["type"], "thing">; label: string; icon: React.ComponentType<{ className?: string }>; lock?: LockKey }[] = [
+  { type: "sky", label: "Sky", icon: Sun, lock: "sky" }, { type: "sea", label: "Sea & floor", icon: Waves, lock: "sea" }, { type: "land", label: "Land", icon: Mountain, lock: "land" },
+  { type: "title", label: "Lettering", icon: Type }, { type: "camera", label: "Camera", icon: Camera, lock: "camera" }, { type: "picture", label: "Picture", icon: Image }, { type: "sound", label: "Sound", icon: AudioLines },
+]
+export function AppSidebar() {
+  const sel = useApp((s) => s.sel), things = useApp((s) => s.world.things), locks = useApp((s) => s.locks), saved = useApp((s) => s.saved)
+  const sky = useApp((s) => s.world.sky), sea = useApp((s) => s.world.sea)
+  // on a phone the sidebar is a sheet: picking something closes it and opens that thing's dials
+  const { isMobile, setOpenMobile } = useSidebar()
+  const pick = (s: Sel) => { patch({ sel: s }); if (isMobile) { setOpenMobile(false); setSheet(true) } }
+  const dot = (type: string) => type === "sky" ? `linear-gradient(${sky.zenith}, ${sky.horizon})` : type === "sea" ? `linear-gradient(${sea.c2}, ${sea.c1})` : undefined
+  return (
+    <Sidebar collapsible="icon" variant="sidebar">
+      <SidebarHeader>
+        <div className="flex h-8 items-center gap-2 px-1.5">
+          <span className="grid size-6 shrink-0 place-items-center rounded-md" style={{ background: `linear-gradient(${sky.zenith}, ${sky.horizon})` }}><Aperture className="size-3.5 text-white mix-blend-overlay" /></span>
+          <span className="font-mark truncate text-[17px] leading-none group-data-[collapsible=icon]:hidden">Crycer</span>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>This world</SidebarGroupLabel>
+          <SidebarGroupContent><SidebarMenu>
+            {PARTS.map((p) => { const on = p.lock && locks.includes(p.lock); return (
+              <SidebarMenuItem key={p.type}>
+                <SidebarMenuButton isActive={sel.type === p.type} tooltip={p.label} onClick={() => pick({ type: p.type })} data-testid={`part-${p.type}`}>
+                  <p.icon /><span>{p.label}</span>
+                  {dot(p.type) && <span className="ml-auto mr-6 size-3 rounded-full ring-1 ring-border group-data-[collapsible=icon]:hidden" style={{ background: dot(p.type) }} />}
+                </SidebarMenuButton>
+                {p.lock && <SidebarMenuAction showOnHover={!on} onClick={() => toggleLock(p.lock!)} aria-label={on ? `Stop keeping the ${p.label.toLowerCase()}` : `Keep the ${p.label.toLowerCase()} when rolling`} title={on ? "Kept when you roll the dice. Click to let the dice change it." : "Keep it when you roll the dice"}>{on ? <Lock /> : <LockOpen />}</SidebarMenuAction>}
+              </SidebarMenuItem>) })}
+          </SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Things <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">{things.length}/20</span></SidebarGroupLabel>
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<SidebarGroupAction aria-label="Add a thing" />}><Plus /></DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" className="w-44"><DropdownMenuItem onClick={() => void pickCutout()}><Image className="size-4" /> Add cutout…</DropdownMenuItem>{ADDABLE.map((k) => { const I = KIND_ICON[k]; return <DropdownMenuItem key={k} onClick={() => newThing(k)}><I className="size-4" /> {KIND_LABEL[k]}</DropdownMenuItem> })}</DropdownMenuContent>
+          </DropdownMenu>
+          <SidebarGroupContent><SidebarMenu>
+            {things.length === 0 && <p className="px-2 py-1 text-[12px] text-muted-foreground group-data-[collapsible=icon]:hidden">Nothing floating here yet. Press + to add a shape.</p>}
+            {things.map((t) => { const I = KIND_ICON[t.kind]; return (
+              <SidebarMenuItem key={t.id}>
+                <SidebarMenuButton size="sm" isActive={sel.type === "thing" && sel.id === t.id} tooltip={t.name} onClick={() => pick({ type: "thing", id: t.id })} className={t.hidden ? "opacity-50" : ""}>
+                  <I /><span className="truncate">{t.name}</span>{t.role !== "solid" && <span className="ml-1 rounded-sm bg-muted px-1 text-[10px] text-muted-foreground">{t.role === "cut" ? "cuts" : "overlap"}</span>}
+                  <span className="ml-auto mr-6 size-2.5 shrink-0 rounded-full ring-1 ring-border" style={{ background: t.mat.color }} />
+                </SidebarMenuButton>
+                <SidebarMenuAction showOnHover={!t.hidden} onClick={() => editThing(t.id, "hide", (k) => { k.hidden = !k.hidden })} aria-label={t.hidden ? `Show ${t.name}` : `Hide ${t.name}`}>{t.hidden ? <EyeOff /> : <Eye />}</SidebarMenuAction>
+              </SidebarMenuItem>) })}
+          </SidebarMenu></SidebarGroupContent>
+        </SidebarGroup>
+        {WORLD_GROUPS.map((g) => (
+          <SidebarGroup key={g} className="group-data-[collapsible=icon]:hidden">
+            <SidebarGroupLabel>{g === "Classics" ? "Start from" : g} <span className="ml-1.5 font-mono text-[10px] text-muted-foreground">{WORLDS.filter((w) => w.group === g).length}</span></SidebarGroupLabel>
+            <SidebarGroupContent><div className="grid grid-cols-2 gap-2 px-2">
+              {WORLDS.map((w, i) => w.group !== g ? null : (
+                <button key={w.name} onClick={() => { replaceWorld(w.make(), "starter"); if (isMobile) setOpenMobile(false) }} className="group/st rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring" data-testid={`starter-${i}`}>
+                  <span className="block transition-transform group-hover/st:scale-[1.03] group-active/st:scale-[.98]"><img src={`./presets/${encodeURIComponent(w.name)}.jpg`} alt="" width={192} height={144} loading="lazy" decoding="async" className="block aspect-[4/3] w-full rounded-md bg-muted object-cover ring-1 ring-border" /></span>
+                  <span className="mt-1 block truncate text-[11.5px] text-muted-foreground group-hover/st:text-foreground">{w.name}</span>
+                </button>))}
+            </div></SidebarGroupContent>
+          </SidebarGroup>))}
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupLabel>My worlds</SidebarGroupLabel>
+          <SidebarGroupAction aria-label="Add this world to My worlds" title="Add this world to My worlds (it stays on this device)" onClick={() => void saveToShelf()} data-testid="shelf-add"><BookmarkPlus /></SidebarGroupAction>
+          <SidebarGroupContent>
+            {saved.length === 0 ? <button onClick={() => void saveToShelf()} className="mx-2 flex w-[calc(100%-1rem)] flex-col items-center gap-1 rounded-md border border-dashed border-border px-3 py-3 text-center text-[12px] leading-snug text-muted-foreground outline-none hover:border-foreground/30 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"><BookmarkPlus className="size-4" />Put this world here to come back to it later. It stays on this device.</button> : (
+              <div className="grid grid-cols-2 gap-2 px-2">{saved.map((s) => (
+                <div key={s.id} className="group/sv relative">
+                  <button onClick={() => { void openSaved(s); if (isMobile) setOpenMobile(false) }} className="block w-full rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"><img src={s.thumb} alt="" className="aspect-[4/3] w-full rounded-md object-cover ring-1 ring-border" /><span className="mt-1 block truncate text-[11.5px] text-muted-foreground">{s.name}</span></button>
+                  <button onClick={() => void saveToShelf(s.id)} aria-label={`Replace ${s.name} with the current world`} title="Replace with the current world" className="absolute top-1 left-1 rounded bg-black/70 px-1.5 py-1 text-[11px] text-white opacity-0 group-hover/sv:opacity-100 group-focus-within/sv:opacity-100 max-md:opacity-100">Replace</button>
+                  <button onClick={() => dropFromShelf(s.id)} aria-label={`Remove ${s.name}`} title={`Remove ${s.name} from My worlds`} className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-black/60 text-white opacity-0 outline-none group-hover/sv:opacity-100 group-focus-within/sv:opacity-100 focus-visible:ring-2 focus-visible:ring-ring max-md:opacity-100"><X className="size-3" /></button>
+                </div>))}</div>)}
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu><SidebarMenuItem><SidebarMenuButton tooltip="Community gallery" render={<a href="./gallery.html" target="_blank" rel="noopener" />} data-testid="open-gallery"><LayoutGrid /><span>Community gallery</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu>
+        <p className="px-2 pb-1 text-[11px] leading-snug text-muted-foreground group-data-[collapsible=icon]:hidden">Drag the picture to look around. Drag a thing to move it. Drag the sun.</p></SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  )
+}
