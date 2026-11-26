@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/images/banner.jpg" alt="Chrome letters floating over a calm mint-green sea with chrome spheres and a low sun, ray traced in the browser" width="880">
+<img src="docs/images/banner.jpg" alt="The word CRYCER in silver and gold letters floating over a turquoise sea under a starry violet sky, with a row of glass spheres, ray traced in Crycer" width="880">
 
 # Crycer
 
@@ -24,6 +24,8 @@ Crycer brings together two projects that each tried to bring back [Bryce](https:
 **Open <https://thatpikaga.github.io/Crycer/>** in a current Chrome, Chromium, Edge or Firefox. Your graphics card needs WebGL2, which nearly every PC from the last ten years has. After the first visit it also works offline, and you can install it as an app from the browser's address bar.
 
 **A classic desk.** Crycer opens in a stone interface laid out like the landscape programs of the 90s:
+
+<img src="docs/images/classic-interface.jpg" alt="The Crycer classic interface: a stone menu strip and Create palette across the top, the camera column with plan view, camera ball, memory dots and Render button on the left, a sunset scene with stone monoliths in the middle, and the sky dials on the right" width="880">
 
 - a **Create / Edit / Sky & Fog** palette strip across the top
 - a **camera column** down the left, with a plan view of the world from above, view buttons, a camera ball, move and zoom pads, lens and bank knobs, seven memory dots for saved views, and a big **Render** button
