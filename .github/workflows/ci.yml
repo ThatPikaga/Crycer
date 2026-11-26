@@ -15,3 +15,7 @@ jobs:
         env:
           CHROME: /usr/bin/google-chrome
         run: node tools/review-regression.mjs
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: screenshots, path: shots/, if-no-files-found: ignore }

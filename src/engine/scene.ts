@@ -40,6 +40,7 @@ export interface Thing {
   text?: TextSpec
   eq?: number // a meter bar: its height follows this band of the music, 0 (lowest) to 15
   beam?: number // for glowing things: 0 lights all around, above 0 is a spotlight this many degrees wide, pointing down its own axis
+  slot?: number // imported models: which model this thing wears (0 = world.model, 1.. = world.models[slot - 1])
 }
 export interface TextSpec {
   str: string; font: string
@@ -80,6 +81,12 @@ export interface Camera { yaw: number; pitch: number; dist: number; target: Vec3
 export interface Title { text: string; x: number; z: number; yaw: number; width: number; lift: number; depth: number; mat: Material }
 export interface Frame { w: number; h: number; name: string }
 export const CUTOUT_EDGE = 384
+/** An imported shape as a grid of distances (n * n * n bytes, base64). */
+export interface ModelGrid { n: number; data: string; name?: string }
+/** How many imported shapes one world can hold at once (world.model plus world.models). */
+export const MAX_MODELS = 4
+/** The grids of a world's imported shapes, slot by slot. */
+export const modelSlots = (w: World): (ModelGrid | undefined)[] => [w.model, ...(w.models ?? [])].slice(0, MAX_MODELS)
 export interface Cutout { width: number; height: number; rgba: string } // RGBA8, top row first
 export interface World {
   v: 2; name: string
@@ -91,6 +98,7 @@ export interface World {
   cutout?: Cutout
   picture?: string // a small picture (data URL) that materials with the "picture" pattern show
   model?: { n: number; data: string } // an imported shape, kept as a grid of distances
+  models?: ModelGrid[] // more imported shapes, so several of your objects can stand in one world
   sound?: SoundSet // how this world moves to music
   bloom?: number // bright things spill light around themselves
   customFont?: string // a font file the user brought (data URL); letters set in "My font" use it
@@ -413,7 +421,8 @@ export async function encodeWorld(w: World, full = false): Promise<string> {
     if (!builtIn) {
       delete lean.model
       lean.things = lean.things.filter(t => t.kind !== "model")
-    }
+    } else lean.things = lean.things.filter(t => t.kind !== "model" || !t.slot)
+    delete lean.models
     delete lean.picture
     delete lean.customFont
   }
@@ -487,6 +496,7 @@ function tidyThing(x: unknown, ids: Set<string>): Thing | null {
   t.id = t.id.slice(0, 40); if (!t.id || ids.has(t.id)) t.id = newId(); ids.add(t.id)
   if (typeof src.hidden === "boolean") t.hidden = src.hidden
   sometimes(t as any, src, ["bob", "spin", "beam", "eq"], -1000, 1000)
+  delete t.slot; if (t.kind === "model" && typeof src.slot === "number" && isFinite(src.slot)) { const sl = Math.round(numIn(src.slot, 0, 0, MAX_MODELS - 1)); if (sl) t.slot = sl }
   if (src.text !== undefined) { const ts = fit(textSpec(""), src.text), st = obj(src.text)
     ts.str = ts.str.slice(0, 120); ts.font = ts.font.slice(0, 24); ts.style = oneOf(ts.style, ["solid", "outline", "tube"] as const, "solid"); ts.edge = oneOf(ts.edge, ["round", "chisel", "sharp"] as const, "round")
     if (st.motion !== undefined) ts.motion = oneOf(st.motion, ["none", "rise", "wave"] as const, "none"); if (typeof st.order === "number" && isFinite(st.order)) ts.order = Math.round(numIn(st.order, 0, 0, 100))
@@ -510,7 +520,7 @@ const tidyThings = (x: unknown) => { const ids = new Set<string>(); return (Arra
 /** Any value at all in, a world the app can safely show out. */
 export function tidyWorld(x: unknown): World {
   const src = obj(x), base = blankWorld()
-  const w: World = { ...fit({ v: 2, name: base.name }, src, true, ["sky", "sea", "land", "terrains", "things", "cam", "views", "frame", "remixOf", "title", "bloom", "picture", "cutout", "customFont", "model", "sound", "anim"]), v: 2, sky: tidySky(src.sky), sea: tidySea(src.sea), land: tidyLand(src.land), things: tidyThings(src.things), cam: tidyCam(src.cam),
+  const w: World = { ...fit({ v: 2, name: base.name }, src, true, ["sky", "sea", "land", "terrains", "things", "cam", "views", "frame", "remixOf", "title", "bloom", "picture", "cutout", "customFont", "model", "models", "sound", "anim"]), v: 2, sky: tidySky(src.sky), sea: tidySea(src.sea), land: tidyLand(src.land), things: tidyThings(src.things), cam: tidyCam(src.cam),
     views: Array.from({ length: 7 }, (_, i) => { const v = Array.isArray(src.views) ? src.views[i] : null; return v && typeof v === "object" ? tidyCam(v) : null }), frame: fit(FRAMES[1], src.frame) }
   if (Array.isArray(src.terrains)) {
     const ids = new Set<string>()
@@ -535,6 +545,10 @@ export function tidyWorld(x: unknown): World {
   const pic = dataUrl(src.picture, /^data:image\/(png|jpeg|webp|gif);/, 3_000_000); if (pic) w.picture = pic
   const font = dataUrl(src.customFont, /^data:(font|application)\/[\w.+-]*;/, 4_200_000); if (font) w.customFont = font
   const md = obj(src.model); if (typeof md.n === "number" && md.n >= 4 && md.n <= 64) { const data = b64ok(md.data, Math.ceil(md.n ** 3 / 3) * 4 + 8); if (data) w.model = { n: Math.round(md.n), data } }
+  if (Array.isArray(src.models)) { const ms: ModelGrid[] = []
+    for (const m of src.models.slice(0, MAX_MODELS - 1)) { const mm = obj(m); if (typeof mm.n !== "number" || mm.n < 4 || mm.n > 64) continue; const data = b64ok(mm.data, Math.ceil(mm.n ** 3 / 3) * 4 + 8); if (!data) continue
+      const g: ModelGrid = { n: Math.round(mm.n), data }; if (typeof mm.name === "string") g.name = mm.name.slice(0, 40); ms.push(g) }
+    if (ms.length) w.models = ms }
   if (src.sound && typeof src.sound === "object") { const s = fit(soundSet(), src.sound); s.pulseTo = oneOf(s.pulseTo, ["bass", "mid", "high", "beat"] as const, "bass"); s.journey = oneOf(s.journey, ["off", "sunset", "candy", "night", "surprise"] as const, "off"); s.every = Math.round(numIn(s.every, 16, 1, 256)); w.sound = s }
   const an = obj(src.anim); if (Array.isArray(an.keys)) {
     w.anim = { seconds: numIn(an.seconds, 6, 0.5, 600), loop: an.loop !== false, ease: an.ease !== false,

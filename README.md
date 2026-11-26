@@ -23,7 +23,17 @@ Crycer brings together two projects that each tried to bring back [Bryce](https:
 
 **Open <https://thatpikaga.github.io/Crycer/>** in a current Chrome, Chromium, Edge or Firefox. Your graphics card needs WebGL2, which nearly every PC from the last ten years has. After the first visit it also works offline, and you can install it as an app from the browser's address bar.
 
-What you can do with it:
+**A classic desk.** Crycer opens in a stone interface laid out like the landscape programs of the 90s:
+
+- a **Create / Edit / Sky & Fog** palette strip across the top
+- a **camera column** down the left, with a plan view of the world from above, view buttons, a camera ball, move and zoom pads, lens and bank knobs, seven memory dots for saved views, and a big **Render** button
+- an **info line** along the bottom that names whatever your pointer is over
+
+Every texture and icon is drawn in code for Crycer. The original glass interface is still there under **View → Switch to the modern interface**.
+
+**My objects.** Import your own `.glb`, `.gltf` or `.obj` models with the ⬆ tile in the Create palette. Each one is saved in your browser and gets its own tile in the palette, so you can place it again in any world. Right-click a tile to rename or remove it. One world can hold up to 4 different imported models, and copies of the same model don't count toward that.
+
+What else you can do:
 
 - **Live ray tracing.** Mirror reflections, glass, soft shadows, depth of field and bloom. The picture sharpens while you watch.
 - **50 ready-made worlds, 45 skies and 22 materials.** Or roll the dice and lock the parts you like.

@@ -1,13 +1,15 @@
 // Exercise saved worlds, custom fonts and model replacement in the built editor.
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { mkdir, readFile } from "node:fs/promises"
 import { browser, serve } from "./serve.mjs"
 
 const server = await serve()
+await mkdir("shots", { recursive: true })
 let chromium
 try {
   chromium = await browser()
   const page = await chromium.newPage({ viewport: { width: 1180, height: 780 } })
+  await page.addInitScript(() => { try { localStorage.setItem("crycer:ui", JSON.stringify("modern")) } catch {} }) // these checks drive the modern interface
   const errors = []
   page.on("pageerror", error => errors.push(error.message))
   await page.goto(server.url)
@@ -61,6 +63,43 @@ try {
   })
   assert.deepEqual(modelChecks, [true, true, true, true, true])
   assert.deepEqual(errors, [])
+
+  // the classic interface: palettes, adding from the object tray, several imported models side by side, My objects
+  const classic = await chromium.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
+  const classicErrors = []
+  classic.on("pageerror", error => classicErrors.push(error.message))
+  await classic.addInitScript(() => { try { localStorage.setItem("crycer:ui", JSON.stringify("classic")) } catch {} })
+  await classic.goto(server.url)
+  await classic.waitForFunction(() => window.__app?.engine?.ok)
+  await classic.getByTestId("classic").waitFor()
+  const things = () => classic.evaluate(() => window.__app.get().world.things.length)
+  const before = await things()
+  await classic.getByTestId("create-sphere").click()
+  assert.equal(await things(), before + 1)
+  await classic.getByTestId("palette-edit").waitFor() // picking a new thing opens the Edit palette
+  const multi = await classic.evaluate(async () => {
+    const load = (name, height) => window.__io.importModel(new File(['v 0 0 0\nv 1 0 0\nv 0 ' + height + ' 0\nv 0 0 1\nf 1 3 2\nf 1 2 4\nf 2 3 4\nf 3 1 4'], name + ".obj"))
+    const a = await load("Tetra", 1), b = await load("Spike", 3)
+    const w = window.__app.get().world, models = w.things.filter((t) => t.kind === "model")
+    return [a, b, models.length, new Set(models.map((t) => t.slot ?? 0)).size, (w.models ?? []).length]
+  })
+  assert.deepEqual(multi, [true, true, 2, 2, 1])
+  await classic.getByTestId("tab-create").click()
+  await classic.getByTestId("my-object").first().waitFor()
+  assert.equal(await classic.getByTestId("my-object").count(), 2)
+  await classic.waitForTimeout(2500)
+  await classic.screenshot({ path: "shots/classic-create.png" })
+  await classic.getByTestId("tab-sky").click(); await classic.waitForTimeout(800)
+  await classic.screenshot({ path: "shots/classic-sky.png" })
+  await classic.getByTestId("tab-edit").click(); await classic.waitForTimeout(500)
+  await classic.screenshot({ path: "shots/classic-edit.png" })
+  await classic.reload(); await classic.waitForFunction(() => window.__app?.engine?.ok)
+  await classic.getByTestId("my-object").first().waitFor() // My objects survive a reload
+  const phone = await chromium.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 })
+  await phone.addInitScript(() => { try { localStorage.setItem("crycer:ui", JSON.stringify("classic")) } catch {} })
+  await phone.goto(server.url); await phone.waitForFunction(() => window.__app?.engine?.ok); await phone.waitForTimeout(1500)
+  await phone.screenshot({ path: "shots/classic-phone.png" })
+  assert.deepEqual(classicErrors, [])
   console.log("Passed shelf add, targeted replace and reload, repeat font selection, model undo and redo.")
 } finally {
   try { await chromium?.close() } finally { server.close() }

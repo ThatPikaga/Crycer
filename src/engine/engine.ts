@@ -4,7 +4,7 @@
 import * as THREE from "three"
 
 import { LH, LW, glyphLayer, titleField } from "./lettering"
-import { type Land, type Camera, MAX_TERRAINS, type Material, type Thing, type World, KINDS, ROLES, SEA_KINDS, TEXTURES } from "./scene"
+import { type Land, type Camera, MAX_TERRAINS, MAX_MODELS, type Material, type ModelGrid, type Thing, type World, KINDS, modelSlots, ROLES, SEA_KINDS, TEXTURES } from "./scene"
 import { DISPLAY_FRAG, MAT_COLS, MAXO, TRACE_FRAG, VERT } from "./shader"
 import { SHAPES, SHAPE_BY_ID } from "./shapes"
 
@@ -117,7 +117,7 @@ export class Engine {
     this.u.uLetters = { value: blank }
     this.glyphTex = new THREE.DataArrayTexture(new Uint8Array(LW * LH * GLYPHS).fill(255), LW, LH, GLYPHS); this.glyphTex.format = THREE.RedFormat; this.glyphTex.minFilter = this.glyphTex.magFilter = THREE.LinearFilter; this.glyphTex.unpackAlignment = 1; this.glyphTex.needsUpdate = true; this.u.uGlyph = { value: this.glyphTex }
     this.u.uCutout = { value: null }; this.picTex = blank; this.u.uPic = { value: blank }
-    this.modelTex = new THREE.Data3DTexture(new Uint8Array([255]), 1, 1, 1); this.modelTex.format = THREE.RedFormat; this.modelTex.unpackAlignment = 1; this.modelTex.needsUpdate = true; this.u.uModel = { value: this.modelTex }
+    this.modelTex = new THREE.Data3DTexture(new Uint8Array([255]), 1, 1, 1); this.modelTex.format = THREE.RedFormat; this.modelTex.unpackAlignment = 1; this.modelTex.needsUpdate = true; this.u.uModel = { value: this.modelTex }; this.u.uModelSlots = { value: 1 }
     this.sculptTex = new THREE.DataArrayTexture(new Uint8Array(GRID * GRID * MAX_TERRAINS).fill(128), GRID, GRID, MAX_TERRAINS)
     this.sculptTex.format = THREE.RedFormat
     this.sculptTex.magFilter = this.sculptTex.minFilter = THREE.LinearFilter; this.sculptTex.needsUpdate = true
@@ -243,7 +243,7 @@ export class Engine {
         if (o.text.motion === "wave") bob += Math.sin((moment - order * 0.11) * Math.PI * 2) * sz[1] * 0.45
         else { const sm = (x: number) => { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x) }, delay = n > 1 ? (order / (n - 1)) * 0.45 : 0
           bob -= (1 - sm((moment - delay) / 0.22) * (1 - sm((moment - 0.86) / 0.12))) * (Math.max(0, o.pos[1]) + sz[1] + 0.4) } }
-      u.uOP.value[i].set(num(o.pos[0], 0), num(o.pos[1], 0) + bob, num(o.pos[2], 0), ki); u.uOS.value[i].set(sz[0], sz[1], sz[2], num(o.round, 0.1, 0, 1))
+      u.uOP.value[i].set(num(o.pos[0], 0), num(o.pos[1], 0) + bob, num(o.pos[2], 0), ki); u.uOS.value[i].set(sz[0], sz[1], sz[2], o.kind === "model" ? Math.round(num(o.slot ?? 0, 0, 0, MAX_MODELS - 1)) : num(o.round, 0.1, 0, 1))
       e.set(THREE.MathUtils.degToRad(o.rot[1]), THREE.MathUtils.degToRad(o.rot[0] + Math.round(o.spin ?? 0) * phase * 360), THREE.MathUtils.degToRad(o.rot[2]), "YXZ"); m4.makeRotationFromEuler(e)
       const el = m4.elements // columns of the rotation = rows of its inverse
       const bent = o.kind === "text" && o.text && (o.text.bend || o.text.arch)
@@ -292,10 +292,18 @@ export class Engine {
     if (pic !== this.picKey) { this.picKey = pic
       const was = this.u.uPic.value as THREE.Texture; if (was !== this.picTex) { this.u.uPic.value = this.picTex; was.dispose() } // the last picture's texture is let go
       if (pic.startsWith("data:image/")) { const im = new Image(); im.onload = () => { if (this.picKey !== pic) return; const tx = new THREE.Texture(im); tx.wrapS = tx.wrapT = THREE.RepeatWrapping; tx.minFilter = tx.magFilter = THREE.LinearFilter; tx.generateMipmaps = false; tx.needsUpdate = true; this.u.uPic.value = tx; this.touch() }; im.src = pic } }
-    const md = w.model, key = md ? `${md.n}:${md.data.length}:${md.data.slice(0, 64)}` : ""
+    // every imported shape in one 3D texture, stacked along z: slot k fills layers k*N .. k*N + N - 1
+    const slots = modelSlots(w), key = slots.map((m) => m ? `${m.n}:${m.data.length}:${m.data.slice(0, 64)}:${m.data.slice(-32)}` : "-").join("|")
     if (key !== this.modelKey) { this.modelKey = key
-      if (md && md.n >= 4 && md.n <= 64) { try { const raw = atob(md.data), n = md.n, d = new Uint8Array(n * n * n).fill(255); for (let i = 0; i < Math.min(raw.length, d.length); i++) d[i] = raw.charCodeAt(i)
-        this.modelTex.dispose(); const tx = new THREE.Data3DTexture(d, n, n, n); tx.format = THREE.RedFormat; tx.minFilter = tx.magFilter = THREE.LinearFilter; tx.unpackAlignment = 1; tx.needsUpdate = true; this.modelTex = tx; this.u.uModel.value = tx } catch { /* a bad model leaves a box */ } } }
+      const ok = slots.filter((m): m is ModelGrid => !!m && m.n >= 4 && m.n <= 64)
+      if (ok.length) { try {
+        const N = Math.max(...ok.map((m) => m.n)), S = slots.length, d = new Uint8Array(N * N * N * S).fill(255)
+        slots.forEach((m, k) => { if (!m || m.n < 4 || m.n > 64) return; const raw = atob(m.data), n = m.n, src = new Uint8Array(n * n * n).fill(255); for (let i = 0; i < Math.min(raw.length, src.length); i++) src[i] = raw.charCodeAt(i)
+          const o = k * N * N * N
+          if (n === N) d.set(src, o)
+          else for (let z = 0; z < N; z++) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { // a smaller grid, stretched to fit its layer
+            const sx = Math.min(n - 1, Math.floor((x + 0.5) * n / N)), sy = Math.min(n - 1, Math.floor((y + 0.5) * n / N)), sz = Math.min(n - 1, Math.floor((z + 0.5) * n / N)); d[o + (z * N + y) * N + x] = src[(sz * n + sy) * n + sx] } })
+        this.modelTex.dispose(); const tx = new THREE.Data3DTexture(d, N, N, N * S); tx.format = THREE.RedFormat; tx.minFilter = tx.magFilter = THREE.LinearFilter; tx.unpackAlignment = 1; tx.needsUpdate = true; this.modelTex = tx; this.u.uModel.value = tx; this.u.uModelSlots.value = S } catch { /* a bad model leaves a box */ } } }
   }
   private putMat(row: number, m: Material) {
     const d = this.matData, o = row * MAT_COLS * 4, c = hex(m.color), c2 = hex(m.color2)

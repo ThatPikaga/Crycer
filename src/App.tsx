@@ -11,6 +11,9 @@ import { Inspector } from "./ui/Inspector"
 import { useSheet } from "./ui/sheet"
 import { TopBar } from "./ui/TopBar"
 import { Viewport } from "./ui/Viewport"
+import { useUiMode } from "./ui/mode"
+
+const ClassicDesk = React.lazy(() => import("./ui/classic/Classic").then((m) => ({ default: m.ClassicDesk })))
 
 // not needed for the first picture: these load when first opened, or quietly once the page is up
 const later = {
@@ -28,7 +31,7 @@ function Later({ when, children }: { when: boolean; children: React.ReactNode })
 }
 
 export function App() {
-  const sky = useApp((s) => s.world.sky), timeline = useApp((s) => s.timeline), dialog = useApp((s) => s.dialog); const sheet = useSheet(), [warm, setWarm] = React.useState(false)
+  const mode = useUiMode(), sky = useApp((s) => s.world.sky), timeline = useApp((s) => s.timeline), dialog = useApp((s) => s.dialog); const sheet = useSheet(), [warm, setWarm] = React.useState(false)
   React.useEffect(() => { // once the page is up and quiet, fetch the rest so nothing waits later
     const go = () => { void preloadFeatures(); void Promise.all(Object.values(later).map((f) => f())).then(() => setWarm(true), () => {}) }
     const id = "requestIdleCallback" in window ? requestIdleCallback(go, { timeout: 4000 }) : setTimeout(go, 2500)
@@ -58,6 +61,7 @@ export function App() {
   const wash = { background: `radial-gradient(1200px 700px at 70% -10%, color-mix(in oklch, ${sky.horizon} 16%, transparent), transparent 70%), radial-gradient(900px 600px at 0% 100%, color-mix(in oklch, ${sky.zenith} 14%, transparent), transparent 70%)` }
   return (
     <TooltipProvider delay={350}>
+      {mode === "classic" ? <React.Suspense fallback={<div className="h-dvh bg-[#26241f]" />}><ClassicDesk /></React.Suspense> : (
       <SidebarProvider style={{ "--sidebar-width": "17rem" } as React.CSSProperties}>
         <AppSidebar />
         <SidebarInset className="h-dvh min-w-0 overflow-hidden" style={wash}>
@@ -68,7 +72,7 @@ export function App() {
             <div className={cn("shrink-0 p-2 pt-0 md:h-full md:w-[19.5rem] md:pl-0", sheet ? "h-[48dvh]" : "h-0 overflow-hidden p-0 md:overflow-visible md:p-2 md:pt-0")}><Inspector /></div>
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </SidebarProvider>)}
       <Later when={warm || dialog === "find"}><CommandBar /></Later><Later when={warm || dialog === "cover"}><DesignDialog /></Later><Later when={warm || dialog === "loop"}><LoopDialog /></Later>
       {FEATURES.map((f) => (f.Overlay ? <f.Overlay key={f.id} /> : null))}
     </TooltipProvider>
