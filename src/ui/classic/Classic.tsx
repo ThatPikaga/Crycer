@@ -200,12 +200,12 @@ function Slider({ label, value, min = 0, max = 1, step = 0.01, onChange }: { lab
 }
 /** The sun as a dot on a dome seen from above: round the edge is where it sits, in or out is how high. */
 function SunDial() {
-  const sun = useApp((s) => s.world.sky.sun), moonOn = useApp((s) => s.world.sky.moon > 0), moon = useApp((s) => [s.world.sky.moonAz, s.world.sky.moonEl] as const)
+  const sun = useApp((s) => s.world.sky.sun), moonOn = useApp((s) => s.world.sky.moon > 0), moonAz = useApp((s) => s.world.sky.moonAz), moonEl = useApp((s) => s.world.sky.moonEl)
   const ref = React.useRef<HTMLDivElement>(null), R = 34
   const pos = (az: number, el: number) => { const r = (1 - Math.min(1, Math.max(0, el / (Math.PI / 2)))) * R; return { left: R + 6 + Math.sin(az) * r, top: R + 6 - Math.cos(az) * r } }
   const set = (e: React.PointerEvent) => { const b = ref.current!.getBoundingClientRect(), x = e.clientX - b.left - R - 6, y = e.clientY - b.top - R - 6, r = Math.min(R, Math.hypot(x, y))
     edit("sun", (w) => { w.sky.sun = { az: Math.atan2(x, -y), el: Math.max(0.02, (1 - r / R) * (Math.PI / 2)) } }) }
-  const s = pos(sun.az, sun.el), m = pos(moon[0], moon[1])
+  const s = pos(sun.az, sun.el), m = pos(moonAz, moonEl)
   return <div className="flex shrink-0 flex-col items-center gap-1">
     <div ref={ref} className="cl-tray relative cursor-crosshair touch-none" style={{ width: R * 2 + 12, height: R * 2 + 12 }} data-tip="Sun position: drag the sun. The middle is straight overhead, the edge is the horizon."
       onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); set(e) }} onPointerMove={(e) => { if (e.buttons) set(e) }} role="slider" aria-label="Sun position" aria-valuetext={`height ${Math.round((sun.el * 180) / Math.PI)} degrees`} aria-valuenow={Math.round((sun.el * 180) / Math.PI)} tabIndex={0}
