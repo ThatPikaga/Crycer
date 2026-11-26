@@ -112,7 +112,7 @@
 
 /* the menu strip across the top */
 .cl-menu {
-  height: 30px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; font-weight: 550; color: var(--cl-ink);
+  flex: none; height: 30px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; font-weight: 550; color: var(--cl-ink);
   outline: none;
 }
 .cl-menu:hover, .cl-menu[data-popup-open] { background: rgba(0, 0, 0, .28); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .5); }
@@ -180,3 +180,6 @@
 .cl-scroll { scrollbar-width: thin; scrollbar-color: #6d6860 transparent; }
 .cl-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
 .cl-scroll::-webkit-scrollbar-thumb { background: #6d6860; border-radius: 3px; }
+
+/* labels carved inside a dark tray read light on dark */
+.cl-tray .cl-engrave { color: #a0978a; text-shadow: 0 -1px 0 rgba(0, 0, 0, .85); }

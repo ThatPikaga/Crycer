@@ -235,8 +235,8 @@ function SkyPalette() {
         </div>
       </div>
       <Divider />
-      <Group label="Skies"><div className="grid grid-flow-col grid-rows-2 gap-1">
-        {SKIES.map((l) => <button key={l.name} type="button" className="h-[21px] w-7 rounded-[5px] shadow-[0_1px_2px_rgba(0,0,0,.7),inset_0_0_0_1px_rgba(0,0,0,.35)] outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-[var(--cl-accent)] aria-pressed:ring-2 aria-pressed:ring-[var(--cl-accent-2)]"
+      <Group label="Skies"><div className="grid grid-flow-col grid-rows-3 gap-[3px]">
+        {SKIES.map((l) => <button key={l.name} type="button" className="h-[15px] w-6 rounded-[4px] shadow-[0_1px_2px_rgba(0,0,0,.7),inset_0_0_0_1px_rgba(0,0,0,.35)] outline-none transition-transform hover:scale-110 focus-visible:ring-2 focus-visible:ring-[var(--cl-accent)] aria-pressed:ring-2 aria-pressed:ring-[var(--cl-accent-2)]"
           style={{ background: swatch(l) }} aria-pressed={sky.zenith === l.zenith && sky.horizon === l.horizon} data-tip={`Sky: ${l.name}`} aria-label={`Sky: ${l.name}`} onClick={() => edit("sky-look", (w) => applySky(w.sky, l))} />)}
       </div></Group>
       <Divider />
@@ -376,8 +376,8 @@ function MenuStrip({ say, render, attrs, setAttrs }: { say: (s: string) => void;
   const M = ({ label, children, w = "w-60" }: { label: string; children: React.ReactNode; w?: string }) => <DropdownMenu><DropdownMenuTrigger render={<button type="button" className="cl-menu" data-testid={`menu-${label.toLowerCase()}`} />}>{label}</DropdownMenuTrigger><DropdownMenuContent className={`${w} max-h-[80dvh]`}>{children}</DropdownMenuContent></DropdownMenu>
   const share = async () => { const u = await shareLink(); try { await navigator.clipboard.writeText(u); notify("Link copied. Whoever opens it gets this world.") } catch { notify("Your link is in the address bar.") } history.replaceState(null, "", u) }
   return (
-    <header className="flex h-10 shrink-0 items-center gap-1 px-2.5">
-      <span className="cl-logo mr-2 select-none" aria-label="Crycer">Crycer</span>
+    <header className="cl-scroll flex h-10 shrink-0 items-center gap-1 overflow-x-auto px-2.5">
+      <span className="cl-logo mr-2 shrink-0 select-none" aria-label="Crycer">Crycer</span>
       <M label="File">
         <DropdownMenuItem onClick={render}>Render and save the picture</DropdownMenuItem>
         <DropdownMenuItem onClick={() => void share()}>Copy a link to this world</DropdownMenuItem>
