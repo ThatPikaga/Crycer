@@ -1,0 +1,182 @@
+/* Crycer classic interface: carved stone panels, inset trays and engraved labels, after the feel of
+   90s landscape programs. Every texture here is generated (SVG noise), nothing is a picture. */
+
+.cl-root {
+  --cl-ink: #ece5d6;
+  --cl-ink-dim: #b6ad9c;
+  --cl-ink-faint: #8a8274;
+  --cl-accent: #e2b04a;
+  --cl-accent-2: #7fd6c9;
+  --cl-tray: #1d1c1a;
+  --cl-tray-2: #2a2825;
+  --cl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .53 0 0 0 0 .5 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --cl-veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='v'%3E%3CfeTurbulence type='turbulence' baseFrequency='.012 .03' numOctaves='4' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .19 0 0 0 0 .17 0 0 0 -2.2 1.1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E");
+  color: var(--cl-ink);
+  background-color: #34312d;
+  background-image: var(--cl-noise), var(--cl-veins), radial-gradient(120% 90% at 50% 0%, #4a4640, #26241f 80%);
+  background-blend-mode: overlay, multiply, normal;
+  font-family: "Geist Variable", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* a raised slab of stone */
+.cl-slab {
+  background-color: #57534c;
+  background-image: var(--cl-noise), linear-gradient(180deg, #6d6860 0%, #57534c 45%, #44403a 100%);
+  background-blend-mode: overlay, normal;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 230, .22),
+    inset 0 -2px 0 rgba(0, 0, 0, .4),
+    inset 1px 0 0 rgba(255, 248, 230, .08),
+    inset -1px 0 0 rgba(0, 0, 0, .25),
+    0 3px 10px rgba(0, 0, 0, .55);
+}
+/* a tray carved into the stone */
+.cl-tray {
+  background-color: var(--cl-tray);
+  background-image: var(--cl-noise), linear-gradient(180deg, #141311, #24221f);
+  background-blend-mode: overlay, normal;
+  border-radius: 9px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .7), inset 0 -1px 0 rgba(255, 248, 230, .08), 0 1px 0 rgba(255, 248, 230, .12);
+}
+/* engraved lettering */
+.cl-engrave {
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase; font-weight: 600;
+  color: #2a2723; text-shadow: 0 1px 0 rgba(255, 248, 230, .28);
+}
+.cl-logo {
+  font-family: "Playfair Display Variable", Georgia, serif; font-style: italic; font-weight: 700;
+  font-size: 21px; letter-spacing: .01em; line-height: 1;
+  background: linear-gradient(180deg, #fff6df 0%, #e2b04a 48%, #8a5a1c 52%, #f2cf7a 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, .6));
+}
+
+/* a palette tile: a little lit object sitting in its own socket */
+.cl-tile {
+  position: relative; display: grid; place-items: center; flex: none;
+  width: 42px; height: 42px; border-radius: 9px;
+  background: radial-gradient(80% 80% at 50% 30%, #3a3833, #1b1a18);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, .1), inset 0 -1px 2px rgba(0, 0, 0, .6), 0 1px 0 rgba(255, 248, 230, .1);
+  transition: transform .12s ease, box-shadow .15s ease, background .15s ease;
+  outline: none; cursor: pointer;
+}
+.cl-tile > svg, .cl-tile > img { width: 30px; height: 30px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); transition: transform .15s ease; }
+.cl-tile > img { width: 34px; height: 34px; border-radius: 5px; object-fit: contain; }
+.cl-tile:hover { background: radial-gradient(80% 80% at 50% 30%, #4a463e, #23211e); box-shadow: inset 0 1px 0 rgba(255, 248, 230, .16), 0 0 0 1px rgba(226, 176, 74, .45), 0 0 14px -2px rgba(226, 176, 74, .45); }
+.cl-tile:hover > svg, .cl-tile:hover > img { transform: translateY(-1px) scale(1.06); }
+.cl-tile:active { transform: scale(.94); }
+.cl-tile:focus-visible { box-shadow: 0 0 0 2px var(--cl-accent); }
+.cl-tile[aria-pressed="true"] { box-shadow: inset 0 2px 5px rgba(0, 0, 0, .8), 0 0 0 1px rgba(127, 214, 201, .7); }
+.cl-tile[data-off="true"] { opacity: .35; pointer-events: none; }
+
+/* group colours: what a family of tiles is painted in */
+.cl-g-plane { color: #8fb7d8; }
+.cl-g-nature { color: #9cbf6a; }
+.cl-g-shape { color: #d9d2c2; }
+.cl-g-light { color: #ffd27a; }
+.cl-g-mine { color: #c7a6f0; }
+
+/* the three palette tabs */
+.cl-tab {
+  position: relative; height: 30px; padding: 0 16px; border-radius: 9px 9px 0 0;
+  font-size: 12.5px; font-weight: 600; letter-spacing: .04em;
+  color: #2a2723; text-shadow: 0 1px 0 rgba(255, 248, 230, .3);
+  background-image: var(--cl-noise), linear-gradient(180deg, #5e5a53, #4b4741);
+  background-blend-mode: overlay, normal;
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, .18);
+  outline: none;
+}
+.cl-tab[aria-selected="true"] {
+  color: #fff6df; text-shadow: 0 0 10px rgba(226, 176, 74, .7), 0 1px 0 rgba(0, 0, 0, .6);
+  background-image: var(--cl-noise), linear-gradient(180deg, #77716a, #625d56);
+}
+.cl-tab:focus-visible { box-shadow: inset 0 0 0 2px var(--cl-accent); }
+
+/* push buttons and small round knobs */
+.cl-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 28px; padding: 0 10px; border-radius: 8px; font-size: 12px; font-weight: 550; color: var(--cl-ink);
+  background-image: linear-gradient(180deg, #4d4943, #34312c);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, .16), inset 0 -1px 0 rgba(0, 0, 0, .5), 0 1px 2px rgba(0, 0, 0, .5);
+  outline: none; transition: filter .12s, transform .1s;
+}
+.cl-btn:hover { filter: brightness(1.15); }
+.cl-btn:active { transform: translateY(1px); box-shadow: inset 0 2px 3px rgba(0, 0, 0, .6); }
+.cl-btn:disabled { opacity: .4; pointer-events: none; }
+.cl-btn:focus-visible { box-shadow: 0 0 0 2px var(--cl-accent); }
+.cl-btn[aria-pressed="true"] { color: #1b1a18; background-image: linear-gradient(180deg, #f2cf7a, #c9902e); }
+.cl-btn svg { width: 15px; height: 15px; }
+.cl-icon-btn { width: 28px; padding: 0; }
+
+/* the menu strip across the top */
+.cl-menu {
+  height: 30px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; font-weight: 550; color: var(--cl-ink);
+  outline: none;
+}
+.cl-menu:hover, .cl-menu[data-popup-open] { background: rgba(0, 0, 0, .28); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .5); }
+.cl-menu:focus-visible { box-shadow: 0 0 0 2px var(--cl-accent); }
+
+/* the camera ball */
+.cl-ball {
+  border-radius: 9999px; cursor: grab; touch-action: none;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255, 255, 255, .95) 0 6%, rgba(255, 255, 255, 0) 22%),
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(0, 0, 0, .55) 100%),
+    var(--cl-ball-face, radial-gradient(circle at 40% 35%, #9fe6dc, #2f8f86 60%, #123a37));
+  box-shadow: 0 6px 14px rgba(0, 0, 0, .65), inset 0 -4px 10px rgba(0, 0, 0, .5);
+}
+.cl-ball:active { cursor: grabbing; }
+
+/* the memory row: little sockets that light up when they hold a view */
+.cl-dot {
+  width: 15px; height: 15px; border-radius: 9999px; outline: none;
+  background: radial-gradient(circle at 40% 35%, #46433d, #1a1917);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .8), 0 1px 0 rgba(255, 248, 230, .14);
+}
+.cl-dot[data-on="true"] { background: radial-gradient(circle at 40% 35%, #c9fff2, #3fcaa8 55%, #0f5a4a); box-shadow: 0 0 8px rgba(63, 202, 168, .7), inset 0 -1px 1px rgba(0, 0, 0, .4); }
+.cl-dot:focus-visible { box-shadow: 0 0 0 2px var(--cl-accent); }
+
+/* the render button: a big glowing jewel */
+.cl-render {
+  width: 62px; height: 62px; border-radius: 9999px; display: grid; place-items: center; outline: none;
+  background: radial-gradient(circle at 38% 30%, #fff1c9 0 8%, #f2b444 30%, #a8601a 75%, #4a2a0c);
+  box-shadow: 0 0 0 4px #2a2723, 0 0 0 5px rgba(255, 248, 230, .16), 0 6px 16px rgba(0, 0, 0, .7), 0 0 22px -4px rgba(242, 180, 68, .6);
+  transition: transform .1s, filter .15s;
+}
+.cl-render:hover { filter: brightness(1.1) saturate(1.1); }
+.cl-render:active { transform: scale(.95); }
+.cl-render:focus-visible { box-shadow: 0 0 0 4px #2a2723, 0 0 0 6px var(--cl-accent); }
+
+/* sliders in the stone */
+.cl-range { -webkit-appearance: none; appearance: none; width: 100%; height: 18px; background: transparent; }
+.cl-range::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: #151412; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 248, 230, .1); }
+.cl-range::-moz-range-track { height: 6px; border-radius: 3px; background: #151412; box-shadow: inset 0 1px 2px rgba(0, 0, 0, .9), 0 1px 0 rgba(255, 248, 230, .1); }
+.cl-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4px; border-radius: 9999px; background: radial-gradient(circle at 40% 35%, #fff6df, #c9902e 70%); box-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+.cl-range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 9999px; background: radial-gradient(circle at 40% 35%, #fff6df, #c9902e 70%); box-shadow: 0 1px 3px rgba(0, 0, 0, .7); }
+.cl-range:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: 2px; border-radius: 4px; }
+
+/* the working window: the picture sits on a dark field, like a monitor set in stone */
+.cl-window {
+  background: radial-gradient(100% 100% at 50% 40%, #1c2024, #0b0c0e);
+  border-radius: 10px;
+  box-shadow: inset 0 3px 8px rgba(0, 0, 0, .9), inset 0 -1px 0 rgba(255, 248, 230, .08), 0 1px 0 rgba(255, 248, 230, .14);
+}
+
+/* the info line along the bottom */
+.cl-info { font-family: "Geist Mono Variable", ui-monospace, monospace; font-size: 11.5px; color: #c9f2e6; text-shadow: 0 0 6px rgba(127, 214, 201, .5); }
+
+/* the attribute panel (the dials) wears stone in this interface */
+.cl-root .cl-attrs .glass-panel {
+  background-color: #3b3833 !important;
+  background-image: var(--cl-noise), linear-gradient(180deg, #4a4640, #33302b);
+  background-blend-mode: overlay, normal;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.cl-root [data-testid="thing-bar"].glass-panel { background-color: rgba(43, 40, 36, .92); -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* scroll rows of tiles without a heavy scrollbar */
+.cl-scroll { scrollbar-width: thin; scrollbar-color: #6d6860 transparent; }
+.cl-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
+.cl-scroll::-webkit-scrollbar-thumb { background: #6d6860; border-radius: 3px; }

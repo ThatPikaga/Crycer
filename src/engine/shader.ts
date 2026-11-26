@@ -63,7 +63,7 @@ uniform int uNObj; uniform vec4 uOP[MAXO], uOS[MAXO], uR0[MAXO], uR1[MAXO], uR2[
 uniform sampler2D uMat;
 uniform int uNLight; uniform vec4 uLP[4]; uniform vec3 uLC[4];
 uniform sampler2D uLetters; uniform vec4 uTitlePose; uniform vec3 uTitleBox;
-uniform vec4 uLD[4]; uniform float uRays, uComet, uGridHalf; uniform vec3 uCometDir, uPRo, uPRd; uniform sampler2D uPic; uniform sampler3D uModel; uniform highp sampler2DArray uGlyph;
+uniform vec4 uLD[4]; uniform float uRays, uComet, uGridHalf; uniform vec3 uCometDir, uPRo, uPRd; uniform sampler2D uPic; uniform sampler3D uModel; uniform float uModelSlots; uniform highp sampler2DArray uGlyph;
 
 // ---------- random ----------
 uint rs;
@@ -173,7 +173,8 @@ float sdThing(int i, vec3 p){
     d = max((u.y > 0. ? u.y - top : -u.y - bot) * .32, (rr - 1.) * .6); }
   else if (k == 12) {
     vec3 b = abs(u) - 1.; float db = length(max(b, 0.)) + min(max(b.x, max(b.y, b.z)), 0.);
-    float v = texture(uModel, clamp(u * .5 + .5, 0., 1.)).r - .5;
+    vec3 mc = clamp(u * .5 + .5, 0., 1.); float mz = float(textureSize(uModel, 0).x); mc.z = (r + clamp(mc.z, .5 / mz, 1. - .5 / mz)) / max(uModelSlots, 1.); // r holds the model's slot
+    float v = texture(uModel, mc).r - .5;
     d = (db > 0. ? db + max(v, .02) : v) * .8; }
   else if (k == 13) {
     // lettering: a distance picture of the text, given depth. tx = layer, used width, used height, style + 10 * edge

@@ -8,10 +8,10 @@ import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js"
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js"
 import { MeshBVH } from "three-mesh-bvh"
 
-import { type Thing, type World, MAX_THINGS, mat, thing } from "./engine/scene"
+import { type Thing, type World } from "./engine/scene"
 import { SHAPE_BY_ID } from "./engine/shapes"
 import { Said, save, told } from "./io"
-import { edit, engine, get, patch } from "./store"
+import { engine, get } from "./store"
 import { fileName } from "./ui/TopBar"
 import { writeGrid } from "./ui/Viewport"
 
@@ -75,35 +75,45 @@ export async function meshToGrid(geo: THREE.BufferGeometry, n = 44): Promise<str
   }
   return writeGrid(d)
 }
-/** A 3D model becomes a thing. False (and a message) if the file holds no shape that can be read. */
+/** A 3D model file read into a grid of distances (and a small picture of it for the object list). Throws Said with a message people can read. */
+export async function modelFromFile(file: File): Promise<{ name: string; n: number; data: string; thumb: string }> {
+  if (!file.size) throw new Said("That model file is empty.")
+  if (file.size > 80_000_000) throw new Said("That model is too large to bring in here (over 80 MB). Try a lighter version.")
+  const geos: THREE.BufferGeometry[] = []; let root: THREE.Object3D, tris = 0
+  if (/\.obj$/i.test(file.name)) root = new OBJLoader().parse(await file.text())
+  else { const buf = await file.arrayBuffer(), head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(4, buf.byteLength)))
+    if (head !== "glTF" && !/^\s*\{/.test(new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(64, buf.byteLength))))) throw new Said("That file is not a .glb or .gltf model. Try exporting it again.")
+    root = (await new GLTFLoader().parseAsync(buf, "")).scene }
+  root.updateMatrixWorld(true)
+  root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh || !m.geometry?.attributes.position) return; const g = new THREE.BufferGeometry(); const src = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry
+    tris += src.attributes.position.count / 3; if (tris > 3_000_000) throw new Said("That model has too many triangles to bring in here. Try a lighter version.")
+    g.setAttribute("position", src.attributes.position.clone()); g.applyMatrix4(m.matrixWorld); geos.push(g) })
+  if (!geos.length) throw new Said("That file has no shape in it that could be read.")
+  const merged = mergeGeometries(geos); if (!merged) throw new Said("That model's pieces could not be joined into one shape.")
+  merged.computeBoundingBox(); const bb = merged.boundingBox!; if (![bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].every(isFinite)) throw new Said("That model's shape is broken. Try exporting it again.")
+  const n = 60, data = await meshToGrid(merged, n)
+  return { name: file.name.replace(/\.[^.]+$/, "").slice(0, 30) || "My object", n, data, thumb: thumbOf(merged) }
+}
+/** A small grey picture of a mesh, for the object list. Empty if the browser will not draw it. */
+function thumbOf(geo: THREE.BufferGeometry, size = 96): string {
+  let r: THREE.WebGLRenderer | null = null
+  try {
+    const g = geo.clone(); g.computeBoundingBox(); const bb = g.boundingBox!, c = bb.getCenter(new THREE.Vector3()), s = bb.getSize(new THREE.Vector3()), k = 1.6 / Math.max(s.x, s.y, s.z, 1e-6)
+    g.translate(-c.x, -c.y, -c.z); g.scale(k, k, k); g.computeVertexNormals()
+    const canvas = document.createElement("canvas"); canvas.width = canvas.height = size
+    r = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setClearColor(0x000000, 0)
+    const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(35, 1, 0.1, 50); cam.position.set(2.6, 1.9, 3.2); cam.lookAt(0, 0, 0)
+    scene.add(new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: 0xd9d4c7, roughness: 0.45, metalness: 0.15 })))
+    scene.add(new THREE.HemisphereLight(0xfff4dc, 0x40464f, 1.6)); const sun = new THREE.DirectionalLight(0xffffff, 2.2); sun.position.set(3, 5, 2); scene.add(sun)
+    r.render(scene, cam); const url = canvas.toDataURL("image/png"); g.dispose(); return url
+  } catch { return "" } finally { r?.dispose(); r?.forceContextLoss() }
+}
+/** A 3D model file goes into My objects and into the world. False (and a message) if it holds no shape that can be read. */
 export async function importModel(file: File): Promise<boolean> {
   try {
-    if (!file.size) throw new Said("That model file is empty.")
-    if (file.size > 80_000_000) throw new Said("That model is too large to bring in here (over 80 MB). Try a lighter version.")
-    const geos: THREE.BufferGeometry[] = []; let root: THREE.Object3D, tris = 0
-    if (/\.obj$/i.test(file.name)) root = new OBJLoader().parse(await file.text())
-    else { const buf = await file.arrayBuffer(), head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(4, buf.byteLength)))
-      if (head !== "glTF" && !/^\s*\{/.test(new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(64, buf.byteLength))))) throw new Said("That file is not a .glb or .gltf model. Try exporting it again.")
-      root = (await new GLTFLoader().parseAsync(buf, "")).scene }
-    root.updateMatrixWorld(true)
-    root.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh || !m.geometry?.attributes.position) return; const g = new THREE.BufferGeometry(); const src = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry
-      tris += src.attributes.position.count / 3; if (tris > 3_000_000) throw new Said("That model has too many triangles to bring in here. Try a lighter version.")
-      g.setAttribute("position", src.attributes.position.clone()); g.applyMatrix4(m.matrixWorld); geos.push(g) })
-    if (!geos.length) throw new Said("That file has no shape in it that could be read.")
-    const merged = mergeGeometries(geos); if (!merged) throw new Said("That model's pieces could not be joined into one shape.")
-    merged.computeBoundingBox(); const bb = merged.boundingBox!; if (![bb.min.x, bb.min.y, bb.min.z, bb.max.x, bb.max.y, bb.max.z].every(isFinite)) throw new Said("That model's shape is broken. Try exporting it again.")
-    const n = 60, data = await meshToGrid(merged, n)
-    const world = get().world
-    const remaining = world.things.filter((t) => t.kind !== "model")
-    if (remaining.length >= MAX_THINGS) throw new Said(`A world holds up to ${MAX_THINGS} things. Remove one to make room for the model.`)
-    const [x, y, z] = world.cam.target
-    const name = file.name.replace(/\.[^.]+$/, "").slice(0, 30) || "Imported model"
-    const imported = thing("model", [x, Math.max(2.4, y), z], 2.4, mat("Chrome"), { name })
-    edit(`import-model:${imported.id}`, (w) => {
-      w.model = { n, data }
-      w.things = [...w.things.filter((t) => t.kind !== "model"), imported]
-    })
-    patch({ sel: { type: "thing", id: imported.id } })
-    return true
+    const m = await modelFromFile(file)
+    const { addToLibrary, placeObject } = await import("./library")
+    const obj = await addToLibrary(m)
+    return placeObject(obj)
   } catch (e) { return told(e, "That file had no shape that could be read. Try a .glb or .obj model.") }
 }

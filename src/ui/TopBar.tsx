@@ -2,7 +2,7 @@
 // (share, design, loop, save). It measures its own width, not the window's: with the sidebar
 // open or shut the same bar has more or less room. What does not fit folds into "More".
 import * as React from "react"
-import { Check, Clapperboard, Code2, Copy, Disc3, Download, Ellipsis, FolderOpen, GanttChart, LayoutGrid, Link, Redo2, Search, Share2, Sparkles, Undo2 } from "lucide-react"
+import { Check, Clapperboard, Code2, Copy, Disc3, Download, Gem, Ellipsis, FolderOpen, GanttChart, LayoutGrid, Link, Redo2, Search, Share2, Sparkles, Undo2 } from "lucide-react"
 
 import { FEATURES, openEmbed } from "@/features"
 import { pickPhoto } from "@/features/photo-world"
@@ -18,6 +18,7 @@ import { QUALITY } from "@/engine/engine"
 import { notify } from "@/notice"
 import { selectedTerrainId, edit, engine, get, patch, redo, shareLink, undo, useApp } from "@/store"
 
+import { setUiMode } from "./mode"
 import { Tip } from "./Viewport"
 
 export function download(canvas: HTMLCanvasElement, name: string) {
@@ -26,7 +27,7 @@ export function download(canvas: HTMLCanvasElement, name: string) {
 export const fileName = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "world"
 
 /** Bring things in, take things out: the File menu's items, also folded into "More" on a phone. */
-function FileItems({ say }: { say: (s: string) => void }) {
+export function FileItems({ say }: { say: (s: string) => void }) {
   return <>
     <DropdownMenuGroup><DropdownMenuLabel>Bring in</DropdownMenuLabel>
       <DropdownMenuItem onClick={() => void pickCutout()}>Add cutout (transparent PNG)…</DropdownMenuItem>
@@ -109,6 +110,7 @@ export function TopBar() {
             </span>
           </Tip>
           <Tip label="Find any look, shape, world or action (/)"><Button variant="glass" size="sm" className="hidden text-muted-foreground @min-[560px]:inline-flex" onClick={() => patch({ dialog: "find" })} aria-label="Find anything" data-testid="open-find"><Search /><span className="hidden @min-[1150px]:inline">Find anything</span><Kbd className="hidden @min-[1150px]:inline-flex">/</Kbd></Button></Tip>
+          <Tip label="Switch to the classic stone interface"><Button variant="ghost" size="sm" onClick={() => setUiMode("classic")} aria-label="Classic interface" data-testid="to-classic"><Gem /><span className="hidden @min-[900px]:inline">Classic</span></Button></Tip>
           <ShareButton />
           <Tip label="Make a cover, flyer, poster, postcard…"><Button variant="ghost" size="sm" onClick={() => patch({ dialog: "cover" })} aria-label="Design" data-testid="open-cover"><Disc3 /><span className="hidden @min-[900px]:inline">Design</span></Button></Tip>
           <Tip label="Make a short video that loops"><Button variant="ghost" size="sm" className="hidden @min-[560px]:inline-flex" onClick={() => patch({ dialog: "loop" })} aria-label="Loop" data-testid="open-loop"><Clapperboard /><span className="hidden @min-[900px]:inline">Loop</span></Button></Tip>

@@ -110,7 +110,7 @@ export async function setPicture(file: Blob): Promise<boolean> {
 /** Any file someone drops or picks: sent to whatever can use it, or a kind word saying what can. */
 export async function openFile(file: File): Promise<boolean> {
   const name = file.name.toLowerCase()
-  if (/\.(glb|gltf|obj)$/.test(name)) { const busy = notify("Reading the model…", { ms: 0 }); const ok = await importModel(file); dismiss(busy); if (ok) notify("The model is in the world. Undo to take it out."); return ok }
+  if (/\.(glb|gltf|obj)$/.test(name)) { const busy = notify("Reading the model…", { ms: 0 }); const ok = await importModel(file); dismiss(busy); if (ok) notify("The model is in the world and saved to My objects."); return ok }
   if (/\.(ttf|otf|woff2?)$/.test(name)) { const { loadCustomFont } = await import("./text"); const ok = await loadCustomFont(file); notify(ok ? "Your font is ready: pick \u201cMy font\u201d for any lettering." : "That font file could not be read. Try a .ttf, .otf or .woff file."); return ok }
   notify("That kind of file cannot be used here. Drop a photo, a 3D model (.glb, .obj) or a font (.ttf, .otf, .woff).")
   return false

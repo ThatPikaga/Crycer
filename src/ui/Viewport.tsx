@@ -62,7 +62,7 @@ function sculptAt(id: string | undefined, x: number, z: number, tool: SculptTool
   })
 }
 
-export function Viewport() {
+export function Viewport({ classic = false }: { classic?: boolean } = {}) {
   const world = useApp((s) => s.world), sel = useApp((s) => s.sel), quality = useApp((s) => s.quality), wires = useApp((s) => s.wires), mask = useApp((s) => s.mask)
   const locks = useApp((s) => s.locks), rolls = useApp((s) => s.rolls), status = useApp((s) => s.status), sculpt = useApp((s) => s.sculpt)
   const picked = useApp(selectedThing)
@@ -100,9 +100,9 @@ export function Viewport() {
   const aspect = world.frame.w / world.frame.h, narrow = useIsMobile(), sheet = useSheet()
   React.useEffect(() => {
     // on a phone the dock sits in the flow under the picture, so the picture leaves room for it
-    const el = box.current!; const fit = () => { const pw = el.clientWidth - (narrow ? 16 : 24), ph = el.clientHeight - (narrow ? 84 : 24); const w = Math.max(80, Math.min(pw, ph * aspect)); setCss({ w: Math.round(w), h: Math.round(w / aspect) }) }
+    const el = box.current!; const fit = () => { const pw = el.clientWidth - (narrow ? 16 : 24), ph = el.clientHeight - (narrow && !classic ? 84 : 24); const w = Math.max(80, Math.min(pw, ph * aspect)); setCss({ w: Math.round(w), h: Math.round(w / aspect) }) }
     fit(); const ro = new ResizeObserver(fit); ro.observe(el); return () => ro.disconnect()
-  }, [aspect, narrow])
+  }, [aspect, narrow, classic])
   React.useEffect(() => {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5); let w = css.w * dpr, h = css.h * dpr; const k = Math.sqrt(1_300_000 / (w * h)); if (k < 1) { w *= k; h *= k }
     engine?.setSize(w, h)
@@ -180,7 +180,7 @@ export function Viewport() {
       )}
 
       {/* the dock: add a thing, roll the dice. Floats on the picture on a wide screen, sits under it on a phone */}
-      <div className="relative z-10 shrink-0 md:absolute md:bottom-4 md:left-1/2 md:-translate-x-1/2">
+      <div className={classic ? "hidden" : "relative z-10 shrink-0 md:absolute md:bottom-4 md:left-1/2 md:-translate-x-1/2"}>
         <Welcome />
         <div className="glass-panel flex items-center gap-1 rounded-xl p-1.5" role="toolbar" aria-label="Dock">
           <DropdownMenu>
