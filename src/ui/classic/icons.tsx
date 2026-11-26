@@ -1,6 +1,6 @@
 // Little shaded pictures of each shape for the object palette. Drawn for Crycer: simple lit solids
 // in one consistent style, so a row of them reads like a tray of real objects.
-import * as React from "react"
+import type * as React from "react"
 
 type P = { className?: string }
 const S = ({ children, className }: { children: React.ReactNode; className?: string }) => (
@@ -9,15 +9,15 @@ const S = ({ children, className }: { children: React.ReactNode; className?: str
 // one light from the upper left for everything: a lit face, a side face and a shadow face
 const L = "currentColor", side = "color-mix(in oklch, currentColor 62%, black)", dark = "color-mix(in oklch, currentColor 38%, black)", hi = "color-mix(in oklch, currentColor 55%, white)"
 
-export const SphereIcon = ({ className }: P) => { const id = "cl" + React.useId().replace(/[^a-zA-Z0-9_-]/g, ""); return <S className={className}><defs><radialGradient id={id} cx=".36" cy=".32" r=".75"><stop offset="0" stopColor={hi} /><stop offset=".45" stopColor={L} /><stop offset="1" stopColor={dark} /></radialGradient></defs><circle cx="16" cy="16" r="11" fill="{`url(#${id})`}" /></S> }
+export const SphereIcon = ({ className }: P) => <S className={className}><circle cx="16" cy="16" r="11" fill={side} /><circle cx="14.5" cy="14.5" r="9.5" fill={L} /><circle cx="12.5" cy="12" r="5.5" fill={hi} opacity=".7" /><circle cx="11.5" cy="11" r="2" fill="#fff" opacity=".85" /></S>
 export const CubeIcon = ({ className }: P) => <S className={className}><path d="M16 5 27 10.5 16 16 5 10.5Z" fill={hi} /><path d="M5 10.5 16 16v11L5 21.5Z" fill={L} /><path d="M27 10.5 16 16v11l11-5.5Z" fill={side} /></S>
 export const PyramidIcon = ({ className }: P) => <S className={className}><path d="M16 4 5 23l11 5Z" fill={L} /><path d="M16 4l11 19-11 5Z" fill={side} /></S>
 export const CylinderIcon = ({ className }: P) => <S className={className}><path d="M7 9v14c0 2.2 4 4 9 4s9-1.8 9-4V9" fill={L} /><path d="M16 27c5 0 9-1.8 9-4V9" fill={side} /><ellipse cx="16" cy="9" rx="9" ry="4" fill={hi} /></S>
 export const ConeIcon = ({ className }: P) => <S className={className}><path d="M16 4 6 23c0 2.2 4.5 4 10 4Z" fill={L} /><path d="M16 4l10 19c0 2.2-4.5 4-10 4Z" fill={side} /></S>
-export const TorusIcon = ({ className }: P) => { const id = "cl" + React.useId().replace(/[^a-zA-Z0-9_-]/g, ""); return <S className={className}><defs><radialGradient id={id} cx=".4" cy=".3" r=".8"><stop offset="0" stopColor={hi} /><stop offset=".55" stopColor={L} /><stop offset="1" stopColor={dark} /></radialGradient></defs><path fillRule="evenodd" d="M16 8c7.2 0 13 3.6 13 8s-5.8 8-13 8S3 20.4 3 16s5.8-8 13-8Zm0 5c-3.9 0-7 1.3-7 3s3.1 3 7 3 7-1.3 7-3-3.1-3-7-3Z" fill="{`url(#${id})`}" /></S> }
+export const TorusIcon = ({ className }: P) => <S className={className}><path fillRule="evenodd" d="M16 8c7.2 0 13 3.6 13 8s-5.8 8-13 8S3 20.4 3 16s5.8-8 13-8Zm0 5c-3.9 0-7 1.3-7 3s3.1 3 7 3 7-1.3 7-3-3.1-3-7-3Z" fill={side} /><path fillRule="evenodd" d="M16 8c7.2 0 13 3.6 13 8 0 .6-.1 1.1-.3 1.6C27 14 22 11.5 16 11.5S5 14 3.3 17.6C3.1 17.1 3 16.6 3 16c0-4.4 5.8-8 13-8Z" fill={L} /><path d="M8 11.5c2.2-1.2 5-1.8 8-1.8" stroke={hi} strokeWidth="1.6" /></S>
 export const DiscIcon = ({ className }: P) => <S className={className}><path d="M3 15v2c0 2.8 5.8 5 13 5s13-2.2 13-5v-2" fill={side} /><ellipse cx="16" cy="15" rx="13" ry="5" fill={hi} /></S>
 export const StoneIcon = ({ className }: P) => <S className={className}><path d="M6 20 9 11l8-4 8 5 2 9-7 5-10-1Z" fill={L} /><path d="m17 7 8 5 2 9-7 5-3-11Z" fill={side} /><path d="m9 11 8-4 0 8-11 5Z" fill={hi} opacity=".55" /></S>
-export const BlobIcon = ({ className }: P) => { const id = "cl" + React.useId().replace(/[^a-zA-Z0-9_-]/g, ""); return <S className={className}><defs><radialGradient id={id} cx=".35" cy=".3" r=".8"><stop offset="0" stopColor={hi} /><stop offset=".5" stopColor={L} /><stop offset="1" stopColor={dark} /></radialGradient></defs><path d="M9 21c-4-3-3-10 2-11 2-5 9-5 11-1 5 0 7 6 4 10 1 5-5 8-9 6-3 2-7 0-8-4Z" fill="{`url(#${id})`}" /></S> }
+export const BlobIcon = ({ className }: P) => <S className={className}><path d="M9 21c-4-3-3-10 2-11 2-5 9-5 11-1 5 0 7 6 4 10 1 5-5 8-9 6-3 2-7 0-8-4Z" fill={side} /><path d="M9.5 19.5c-3-3-2-8.5 2-9.2 2-4.2 8-4.2 9.6-.8 4.2 0 5.8 4.6 3.3 8-3 1-12 3-14.9 2Z" fill={L} /><ellipse cx="13.5" cy="12.5" rx="3.5" ry="2.2" fill={hi} opacity=".7" /></S>
 export const TreeIcon = ({ className }: P) => <S className={className}><path d="M14.5 19h3v9h-3Z" fill="#8a5a34" /><circle cx="16" cy="13" r="9" fill={L} /><circle cx="13" cy="10" r="4.5" fill={hi} opacity=".5" /></S>
 export const PineIcon = ({ className }: P) => <S className={className}><path d="M14.8 23h2.4v6h-2.4Z" fill="#8a5a34" /><path d="M16 3 9 13h4l-6 6h5l-6 6h20l-6-6h5l-6-6h4Z" fill={L} /><path d="M16 3v22h10l-6-6h5l-6-6h4Z" fill={side} /></S>
 export const CragIcon = ({ className }: P) => <S className={className}><path d="M4 12 10 8l7 1 6-3 5 5-6 2-9 1Z" fill={hi} /><path d="M4 12l9 2 9-1 6-2-7 9-5 8-4-7Z" fill={L} /><path d="m22 13 6-2-7 9-5 8 2-12Z" fill={side} /></S>
@@ -34,7 +34,7 @@ export const TerrainIcon = ({ className }: P) => <S className={className}><path 
 export const IslandIcon = ({ className }: P) => <S className={className}><path d="M2 23c5-2 23-2 28 0v4H2Z" fill="#2f6fd0" opacity=".85" /><path d="M7 23c2-6 5-11 9-11s7 5 9 11Z" fill={L} /><path d="M16 12c4 0 7 5 9 11h-7Z" fill={side} /></S>
 
 // light
-export const LampIcon = ({ className }: P) => { const id = "cl" + React.useId().replace(/[^a-zA-Z0-9_-]/g, ""); return <S className={className}><defs><radialGradient id={id} cx=".5" cy=".5" r=".5"><stop offset="0" stopColor="#fff" /><stop offset=".35" stopColor={L} /><stop offset="1" stopColor={L} stopOpacity="0" /></radialGradient></defs><circle cx="16" cy="16" r="13" fill="{`url(#${id})`}" /><circle cx="16" cy="16" r="4.5" fill="#fff" /></S> }
+export const LampIcon = ({ className }: P) => <S className={className}><circle cx="16" cy="16" r="13" fill={L} opacity=".18" /><circle cx="16" cy="16" r="9" fill={L} opacity=".35" /><circle cx="16" cy="16" r="5.5" fill={L} /><circle cx="16" cy="16" r="3" fill="#fff" /></S>
 export const SpotIcon = ({ className }: P) => <S className={className}><path d="M12 4h8l-1 5h-6Z" fill={side} /><path d="M13 9h6l8 19H5Z" fill={L} opacity=".45" /><path d="M13 9h6l-3 2Z" fill="#fff" /></S>
 export const NeonIcon = ({ className }: P) => <S className={className}><circle cx="16" cy="16" r="9" stroke={L} strokeWidth="5" opacity=".35" /><circle cx="16" cy="16" r="9" stroke={hi} strokeWidth="2" /></S>
 
